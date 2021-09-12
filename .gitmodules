@@ -1,0 +1,3 @@
+[submodule "client"]
+	path = client
+	url = https://github.com/vinhqngo5/CS116-Blog-Client.git
