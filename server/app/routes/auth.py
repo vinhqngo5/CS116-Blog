@@ -1,11 +1,11 @@
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify
+from datetime import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
-from datetime import datetime
 import os
 import dotenv 
 dotenv.load_dotenv()
-from app.models.user import User
+from app.models import User, db
 
 auth_routes = Blueprint('auth', __name__)
 
@@ -16,17 +16,28 @@ def login():
         token = payload['token']
         
         try:
-            idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.environ['CLIENT_ID'])
+            info = id_token.verify_oauth2_token(token, requests.Request(), os.environ['CLIENT_ID'])
         except Exception as e:
             print(e)
             return jsonify({'error': 'Invalid token'}), 400
         
         now = datetime.now().isoformat()
 
-        users = User.query.all()
-        for user in users:
-            print(user.email)
-        return jsonify({'payload': 'ok'})
+        user = User.query.filter_by(email=info['email']).first()
+
+        if user:
+            # USER LOGIN:
+            user.lastLogin = now
+            db.session.commit()
+        else:
+            # USER FIRST LOGIN:
+            user = User(firstName=info['family_name'], lastName=info['given_name'], email=info['email'],
+                        registeredAt=now, lastLogin=now)
+            db.session.add(user)
+            db.session.commit()
+            pass
+
+        return jsonify({'email': info['email'], 'jwt': ''}), 201
         
     except Exception as e:
         print(e)
