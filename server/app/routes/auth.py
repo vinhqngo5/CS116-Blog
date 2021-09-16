@@ -2,10 +2,10 @@ from flask import Blueprint, request, jsonify, g
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from datetime import datetime
-from app.db import get_db
 import os
 import dotenv 
 dotenv.load_dotenv()
+from app.models.user import User
 
 auth_routes = Blueprint('auth', __name__)
 
@@ -23,26 +23,11 @@ def login():
         
         now = datetime.now().isoformat()
 
-        conn = get_db()
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT * FROM user WHERE email = %s', (idinfo['email'],))
-        data = cursor.fetchall()
-
-        if data:
-            # USER LOGIN: update user last login
-            cursor.execute('UPDATE user SET lastLogin = %s WHERE email = %s', (now, idinfo['email'],))
-            conn.commit()
-        else:
-            # USER FIRST LOGIN: create new user
-            cursor.execute('''
-                INSERT INTO user (firstName, lastName, email, registeredAt, lastLogin)
-                VALUES (%s, %s, %s, %s, %s)''',
-                (idinfo['family_name'], idinfo['given_name'], idinfo['email'], now, now,))
+        users = User.query.all()
+        for user in users:
+            print(user.email)
+        return jsonify({'payload': 'ok'})
         
-        return jsonify({'email': idinfo['email'],
-                        'new_user': False if data else True,
-                        'jwt': ''}), 201
     except Exception as e:
         print(e)
         return jsonify({'error': 'Something went wrong'}), 500
