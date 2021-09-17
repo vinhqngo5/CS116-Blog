@@ -26,7 +26,8 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = CONNECTION_STRING
 
     try:
-        db.init_app(app)
+        with app.app_context():
+            db.init_app(app)
     except Exception as e:
         print(e)
         exit(1)

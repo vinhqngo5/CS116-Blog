@@ -3,10 +3,15 @@ from datetime import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_jwt_extended import create_access_token
+
+import slugify
 import os
+
+from app.models import User
+from app import db
+
 import dotenv 
 dotenv.load_dotenv()
-from app.models import User, db
 
 auth_routes = Blueprint('auth', __name__)
 
@@ -26,21 +31,36 @@ def login():
 
         user = User.query.filter_by(email=info['email']).first()
 
+        firstLogin = True
+
         if user:
             # USER LOGIN:
             user.lastLogin = now
             db.session.commit()
+            firstLogin = False
         else:
             # USER FIRST LOGIN:
+            username = info['email'].split('@')[0]
+            dup_username = User.query.filter(User.slug.ilike(username+'%')).all()
+
+            slugify_unique = slugify.UniqueSlugify(uids=dup_username, to_lower=True)
+            slug = slugify_unique(username)
+            
             user = User(firstName=info['family_name'], lastName=info['given_name'], email=info['email'],
-                        registeredAt=now, lastLogin=now)
+                        slug=slug, avatarLink=info['picture'], registeredAt=now, lastLogin=now)
+            
+            print('a')
             db.session.add(user)
             db.session.commit()
-            pass
-        print('ok')
+        
         jwt = create_access_token(identity=info['email'])
 
-        return jsonify({'email': info['email'], 'jwt': jwt}), 201
+        return jsonify({
+            'email': info['email'],
+            'slug': slug,
+            'firstLogin': firstLogin,
+            'jwt': jwt}
+        ),201
         
     except Exception as e:
         print(e)
