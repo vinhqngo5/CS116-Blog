@@ -43,9 +43,9 @@ def login():
         else:
             # USER FIRST LOGIN:
             username = info['email'].split('@')[0]
-            dup_username = User.query.filter(User.slug.ilike(username+'%')).all()
-
-            slugify_unique = slugify.UniqueSlugify(uids=dup_username, to_lower=True)
+            users_dup_slug = User.query.filter(User.slug.ilike(username+'%')).all()
+            dup_slug = [user.slug for user in users_dup_slug]
+            slugify_unique = slugify.UniqueSlugify(uids=dup_slug, to_lower=True)
             slug = slugify_unique(username)
             
             user = User(firstName=info['family_name'], lastName=info['given_name'], email=info['email'],
@@ -55,20 +55,30 @@ def login():
             db.session.add(user)
             db.session.commit()
         
-        accessToken = create_access_token(identity=info['email'])
-        refreshToken = create_refresh_token(identity=info['email'])
+        accessToken = create_access_token(identity=user.id)
+        refreshToken = create_refresh_token(identity=user.id)
 
         return jsonify({
-            'email': info['email'],
-            'slug': slug,
-            'firstLogin': firstLogin,
-            'accessToken': accessToken,
-            'refreshToken': refreshToken}
+            'userInfo':
+            {
+                'email': user.email,
+                'slug': user.slug,
+                'firstName': user.firstName,
+                'lastName': user.lastName,
+                'avatarLink': user.avatarLink,
+            }, 
+            'auth':
+            {
+                'firstLogin': firstLogin,
+                'accessToken': accessToken,
+                'refreshToken': refreshToken
+            }
+            }
         ),201
         
     except Exception as e:
         print(e)
-        return jsonify({'error': 'Something went wrong'}), 500
+        return jsonify({'msg': 'Something went wrong'}), 500
 
 
 @auth_routes.route("/refresh", methods=["POST"])
