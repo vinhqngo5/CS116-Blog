@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from flask_jwt_extended import create_access_token
 import os
 import dotenv 
 dotenv.load_dotenv()
@@ -36,8 +37,10 @@ def login():
             db.session.add(user)
             db.session.commit()
             pass
+        print('ok')
+        jwt = create_access_token(identity=info['email'])
 
-        return jsonify({'email': info['email'], 'jwt': ''}), 201
+        return jsonify({'email': info['email'], 'jwt': jwt}), 201
         
     except Exception as e:
         print(e)
