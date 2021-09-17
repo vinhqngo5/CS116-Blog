@@ -1,5 +1,7 @@
 import os
-from flask import Flask, jsonify
+from datetime import timedelta
+
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 
@@ -11,7 +13,9 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
     ## JWT CONFIG
-
+    app.config["JWT_SECRET_KEY"] = "super-secret"
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=365)
     jwt.init_app(app)
 
     ## DATABASE CONFIG

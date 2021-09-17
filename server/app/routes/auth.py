@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 
 import slugify
 import os
@@ -32,11 +32,13 @@ def login():
         user = User.query.filter_by(email=info['email']).first()
 
         firstLogin = True
+        slug = ''
 
         if user:
             # USER LOGIN:
             user.lastLogin = now
             db.session.commit()
+            slug = user.slug
             firstLogin = False
         else:
             # USER FIRST LOGIN:
@@ -53,15 +55,25 @@ def login():
             db.session.add(user)
             db.session.commit()
         
-        jwt = create_access_token(identity=info['email'])
+        accessToken = create_access_token(identity=info['email'])
+        refreshToken = create_refresh_token(identity=info['email'])
 
         return jsonify({
             'email': info['email'],
             'slug': slug,
             'firstLogin': firstLogin,
-            'jwt': jwt}
+            'accessToken': accessToken,
+            'refreshToken': refreshToken}
         ),201
         
     except Exception as e:
         print(e)
         return jsonify({'error': 'Something went wrong'}), 500
+
+
+@auth_routes.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    identity = get_jwt_identity()
+    access_token = create_access_token(identity=identity)
+    return jsonify({"accessToken":access_token}), 201
